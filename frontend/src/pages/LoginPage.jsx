@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../api/axios.js'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -8,13 +7,13 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
+  // Sementara pakai dummy login, nanti diganti API
   const handleLogin = () => {
-    
-    if (email === '123' && password === '123') {
-      localStorage.setItem('token', 'token-dummy-kamu');
-      navigate('/dashboard');
+    if (email === 'admin@kelolateam.com' && password === 'password') {
+      localStorage.setItem('token', 'dummy-token')
+      navigate('/dashboard')
     } else {
-      setError('Email atau password salah (Gunakan admin@gmail.com / admin123)');
+      setError('Email atau password salah')
     }
   }
 
@@ -29,7 +28,7 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-1">Platform tim generasi berikutnya</p>
         </div>
 
-        {/* Card Form */}
+        {/* Card */}
         <div className="bg-white border border-gray-200 rounded-2xl p-6">
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5">
             <button className="flex-1 bg-white rounded-lg py-1.5 text-sm font-medium shadow-sm">Masuk</button>
@@ -79,6 +78,12 @@ export default function LoginPage() {
               Lanjut dengan Google
             </button>
           </div>
+        </div>
+
+        {/* Info notif */}
+        <div className="mt-3 bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2">
+          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
+          <span className="text-xs text-gray-500">2 notifikasi absen & tugas menunggu</span>
         </div>
 
       </div>

@@ -17,8 +17,8 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar active="Dashboard" />
-
       <main className="flex-1 p-6 overflow-auto">
+
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
@@ -47,33 +47,34 @@ export default function DashboardPage() {
           {/* Aktivitas Terbaru */}
           <div className="bg-white border border-gray-100 rounded-xl p-5">
             <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-3">Aktivitas Terbaru</p>
-            <div className="flex flex-col">
-              {aktivitas.map((a, i) => (
-                <div key={i} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${a.warna}`}>
-                    {a.inisial}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{a.tugas}</p>
-                    <p className="text-xs text-gray-400">{a.nama} · {a.tim}</p>
-                  </div>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${a.statusWarna}`}>
-                    {a.status}
-                  </span>
+            {aktivitas.map((a, i) => (
+              <div key={i} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${a.warna}`}>
+                  {a.inisial}
                 </div>
-              ))}
-            </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{a.tugas}</p>
+                  <p className="text-xs text-gray-400">{a.nama} · {a.tim}</p>
+                </div>
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${a.statusWarna}`}>
+                  {a.status}
+                </span>
+              </div>
+            ))}
           </div>
 
           {/* Pending Approval */}
           <div className="bg-white border border-gray-100 rounded-xl p-5">
             <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-3">Pending Approval</p>
             <div className="flex flex-col gap-2 mb-4">
-              {['Proposal Desain UI', 'Laporan Keuangan'].map((tugas, i) => (
+              {[
+                { tugas: 'Proposal Desain UI', info: 'Sergius · Alpha' },
+                { tugas: 'Laporan Keuangan', info: 'Akbar · Beta' },
+              ].map((item, i) => (
                 <div key={i} className="bg-gray-50 rounded-xl p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="text-sm font-medium">{tugas}</p>
-                    <span className="text-xs text-gray-400">{i === 0 ? 'Sergius · Alpha' : 'Akbar · Beta'}</span>
+                    <p className="text-sm font-medium">{item.tugas}</p>
+                    <span className="text-xs text-gray-400">{item.info}</span>
                   </div>
                   <div className="flex gap-2">
                     <button className="flex-1 bg-black text-white text-xs py-1.5 rounded-lg">Approve</button>
@@ -83,26 +84,25 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-3">Status Absensi Hari Ini</p>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: 'Hadir', val: '41/48', persen: 85, warna: 'bg-emerald-500' },
-                { label: 'Izin', val: '5/48', persen: 10, warna: 'bg-amber-400' },
-                { label: 'Alpha', val: '2/48', persen: 4, warna: 'bg-red-400' },
-              ].map(s => (
-                <div key={s.label}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-500">{s.label}</span>
-                    <span className="font-medium">{s.val}</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${s.warna}`} style={{ width: `${s.persen}%` }} />
-                  </div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-3">Status Absensi</p>
+            {[
+              { label: 'Hadir', val: '41/48', persen: 85, warna: 'bg-emerald-500' },
+              { label: 'Izin', val: '5/48', persen: 10, warna: 'bg-amber-400' },
+              { label: 'Alpha', val: '2/48', persen: 4, warna: 'bg-red-400' },
+            ].map(s => (
+              <div key={s.label} className="mb-2">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-500">{s.label}</span>
+                  <span className="font-medium">{s.val}</span>
                 </div>
-              ))}
-            </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${s.warna}`} style={{ width: `${s.persen}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+
       </main>
     </div>
   )

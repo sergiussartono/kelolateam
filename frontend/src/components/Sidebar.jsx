@@ -19,13 +19,11 @@ export default function Sidebar({ active }) {
 
   return (
     <div className="w-52 min-h-screen bg-white border-r border-gray-100 flex flex-col py-5 px-3">
-      {/* Logo */}
       <div className="flex items-center gap-2 px-3 mb-6">
         <div className="w-7 h-7 bg-black rounded-lg" />
         <span className="font-medium text-sm">KelolaTeam</span>
       </div>
 
-      {/* Menu */}
       <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider px-3 mb-2">Menu</p>
       <div className="flex flex-col gap-0.5">
         {menuItems.map(item => (
@@ -44,8 +42,8 @@ export default function Sidebar({ active }) {
         ))}
       </div>
 
-      {/* Logout di bawah */}
       <div className="mt-auto px-3">
+        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-2">Akun</p>
         <button
           onClick={handleLogout}
           className="w-full text-sm text-gray-400 hover:text-red-500 text-left py-2"
