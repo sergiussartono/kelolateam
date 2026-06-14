@@ -1,29 +1,37 @@
-import axiosInstance from '../api/axios';
 import { create } from 'zustand'
-const useAuthStore = create((set) => ({ 
+import axiosInstance from '../api/axios'
+
+const useAuthStore = create((set) => ({
   user: null,
-  isAuthenticated: false,
+  isAuthenticated: !!localStorage.getItem('token'),
 
   login: async (email, password) => {
-    try {
-      // Tembak API login asli ke Laravel
-      const response = await axiosInstance.post('/api/login', { email, password });
-      
-      if (response.data.token) {
-        // Jika menggunakan Bearer Token, simpan ke localStorage atau header axios
-        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-      }
+    const response = await axiosInstance.post('/login', { email, password })
+    const { token, user } = response.data
 
-      set({ user: response.data.user, isAuthenticated: true });
-      return true;
-    } catch (error) {
-      console.error('Auth Store Error:', error);
-      throw error; // Lempar kembali ke LoginPage agar ditangkap blok catch(err)
+    // Persist token
+    localStorage.setItem('token', token)
+    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`
+
+    set({ user, isAuthenticated: true })
+    return true
+  },
+
+  logout: () => {
+    localStorage.removeItem('token')
+    delete axiosInstance.defaults.headers.common['Authorization']
+    set({ user: null, isAuthenticated: false })
+  },
+
+  fetchMe: async () => {
+    try {
+      const response = await axiosInstance.get('/me')
+      set({ user: response.data, isAuthenticated: true })
+    } catch {
+      localStorage.removeItem('token')
+      set({ user: null, isAuthenticated: false })
     }
   },
-  
-  logout: () => {
-    set({ user: null, isAuthenticated: false });
-  }
 }))
-export default useAuthStore;
+
+export default useAuthStore 

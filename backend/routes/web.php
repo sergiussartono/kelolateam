@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
+
 Route::get('/', function () {
-    return view('app');
+    return response()->json([
+        'app'     => 'KelolaTeam API',
+        'version' => '1.0.0',
+        'status'  => 'running',
+    ]);
 });
