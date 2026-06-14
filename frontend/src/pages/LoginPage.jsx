@@ -1,49 +1,28 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
 import useAuthStore from '../store/authStore'
 
 export default function LoginPage() {
-  const [tab, setTab] = useState('masuk') // 'masuk' | 'daftar'
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [tab, setTab] = useState('masuk')
+  const [form, setForm] = useState({ name: '', email: '', password: '' })
   const navigate = useNavigate()
-  const login = useAuthStore(s => s.login)
+  const { login, loading, error } = useAuthStore()
+
+  const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
   const handleLogin = async () => {
-    if (!email || !password) { 
-      setError('Email dan password wajib diisi')
-      return 
-    }
-    
-    setLoading(true)
-    setError('')
-
-    try {
-      // 1. Panggil fungsi login di authStore yang asli (mengembalikan promise/api call)
-      const success = await login(email, password)
-      
-      if (success) {
-        navigate('/dashboard')
-      } else {
-        setError('Email atau password salah')
-      }
-    } catch (err) {
-      // 2. Tangkap error jika backend mati atau validasi gagal
-      if (err.response && err.response.data) {
-        setError(err.response.data.message || 'Terjadi kesalahan pada server')
-      } else {
-        setError('Gagal terhubung ke server backend. Pastikan Laravel menyala!')
-      }
-    } finally {
-      setLoading(false)
+    if (!form.email || !form.password) { toast.error('Email dan password wajib diisi'); return }
+    const result = await login(form.email, form.password)
+    if (result.success) {
+      toast.success('Berhasil masuk!')
+      navigate('/dashboard')
+    } else {
+      toast.error(result.message)
     }
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleLogin()
-  }
+  const handleKeyDown = (e) => { if (e.key === 'Enter') handleLogin() }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -62,46 +41,33 @@ export default function LoginPage() {
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
           {/* Tab */}
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-5">
-            <button
-              onClick={() => setTab('masuk')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'masuk' ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}
-            >
-              Masuk
-            </button>
-            <button
-              onClick={() => setTab('daftar')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${tab === 'daftar' ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}
-            >
-              Daftar
-            </button>
+            {['masuk', 'daftar'].map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize
+                  ${tab === t ? 'bg-white shadow-sm text-black' : 'text-gray-400'}`}>
+                {t === 'masuk' ? 'Masuk' : 'Daftar'}
+              </button>
+            ))}
           </div>
 
           {tab === 'masuk' ? (
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1.5 block font-medium">Email</label>
-                <input
-                  type="email"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black focus:ring-2 focus:ring-black/5 transition-all"
+                <input type="email"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all"
                   placeholder="nama@email.com"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
+                  value={form.email} onChange={set('email')} onKeyDown={handleKeyDown} />
               </div>
               <div>
                 <div className="flex justify-between mb-1.5">
                   <label className="text-xs text-gray-500 font-medium">Password</label>
-                  <span className="text-xs text-gray-400 cursor-pointer hover:text-black transition-colors">Lupa password?</span>
+                  <span className="text-xs text-gray-400 cursor-pointer hover:text-black">Lupa password?</span>
                 </div>
-                <input
-                  type="password"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black focus:ring-2 focus:ring-black/5 transition-all"
+                <input type="password"
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
+                  value={form.password} onChange={set('password')} onKeyDown={handleKeyDown} />
               </div>
 
               {error && (
@@ -110,11 +76,8 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <button
-                onClick={handleLogin}
-                disabled={loading}
-                className="w-full bg-black text-white rounded-xl py-2.5 text-sm font-medium hover:bg-gray-800 disabled:opacity-60 transition-all"
-              >
+              <button onClick={handleLogin} disabled={loading}
+                className="w-full bg-black text-white rounded-xl py-2.5 text-sm font-medium hover:bg-gray-800 disabled:opacity-60 transition-all">
                 {loading ? 'Masuk...' : 'Masuk'}
               </button>
 
@@ -127,27 +90,23 @@ export default function LoginPage() {
               <button className="w-full border border-gray-200 rounded-xl py-2.5 text-sm hover:bg-gray-50 transition-colors text-gray-700">
                 Lanjut dengan Google
               </button>
-
-              {/* Hint akun demo */}
-              <div className="bg-gray-50 rounded-xl px-3 py-2.5">
-                <p className="text-xs text-gray-400 font-medium mb-1">Akun Demo:</p>
-                <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">admin@kelolateam.com</span></p>
-                <p className="text-xs text-gray-500">Password: <span className="font-medium text-gray-700">password</span></p>
-              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1.5 block font-medium">Nama Lengkap</label>
-                <input className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all" placeholder="Nama kamu" />
+                <input className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black"
+                  placeholder="Nama kamu" value={form.name} onChange={set('name')} />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1.5 block font-medium">Email</label>
-                <input type="email" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all" placeholder="nama@email.com" />
+                <input type="email" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black"
+                  placeholder="nama@email.com" value={form.email} onChange={set('email')} />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1.5 block font-medium">Password</label>
-                <input type="password" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all" placeholder="••••••••" />
+                <input type="password" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black"
+                  placeholder="••••••••" value={form.password} onChange={set('password')} />
               </div>
               <button className="w-full bg-black text-white rounded-xl py-2.5 text-sm font-medium hover:bg-gray-800 transition-all">
                 Daftar Sekarang
@@ -156,11 +115,6 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Info notif */}
-        <div className="mt-3 bg-white border border-gray-200 rounded-xl px-4 py-3 flex items-center gap-2.5 shadow-sm">
-          <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0" />
-          <span className="text-xs text-gray-500">2 notifikasi absen & tugas menunggu</span>
-        </div>
       </div>
     </div>
   )
