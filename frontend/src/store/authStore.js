@@ -1,27 +1,29 @@
+import axiosInstance from '../api/axios';
 import { create } from 'zustand'
-import { dummyUser } from '../data/dummy'
-
-const useAuthStore = create((set) => ({
+const useAuthStore = create((set) => ({ 
   user: null,
-  token: localStorage.getItem('token') || null,
+  isAuthenticated: false,
 
-  // Login dengan dummy — ganti dengan API saat BE siap
-  login: (email, password) => {
-    if (email === 'admin@kelolateam.com' && password === 'password') {
-      const token = 'dummy-token-kelolateam'
-      localStorage.setItem('token', token)
-      set({ token, user: dummyUser })
-      return true
+  login: async (email, password) => {
+    try {
+      // Tembak API login asli ke Laravel
+      const response = await axiosInstance.post('/api/login', { email, password });
+      
+      if (response.data.token) {
+        // Jika menggunakan Bearer Token, simpan ke localStorage atau header axios
+        axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+      }
+
+      set({ user: response.data.user, isAuthenticated: true });
+      return true;
+    } catch (error) {
+      console.error('Auth Store Error:', error);
+      throw error; // Lempar kembali ke LoginPage agar ditangkap blok catch(err)
     }
-    return false
   },
-
+  
   logout: () => {
-    localStorage.removeItem('token')
-    set({ token: null, user: null })
-  },
-
-  setUser: (user) => set({ user }),
+    set({ user: null, isAuthenticated: false });
+  }
 }))
-
-export default useAuthStore
+export default useAuthStore;

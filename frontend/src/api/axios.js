@@ -1,27 +1,15 @@
-import axios from 'axios'
+import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  headers: { 'Content-Type': 'application/json' }
-})
+const axiosInstance = axios.create({
+    // Mengambil http://127.0.0.1:8000 dari file .env secara otomatis
+    baseURL: import.meta.env.VITE_API_URL, 
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    },
+    // Wajib aktif jika nanti kalian pakai Laravel Sanctum untuk cookies/session Auth
+    withCredentials: true, 
+});
 
-// Otomatis kirim token di setiap request
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
-// Handle token expired / unauthorized
-api.interceptors.response.use(
-  res => res,
-  err => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
-  }
-)
-
-export default api
+export default axiosInstance;

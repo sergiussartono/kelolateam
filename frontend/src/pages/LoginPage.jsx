@@ -12,20 +12,33 @@ export default function LoginPage() {
   const login = useAuthStore(s => s.login)
 
   const handleLogin = async () => {
-    if (!email || !password) { setError('Email dan password wajib diisi'); return }
+    if (!email || !password) { 
+      setError('Email dan password wajib diisi')
+      return 
+    }
+    
     setLoading(true)
     setError('')
 
-    // Simulasi delay seperti API call
-    await new Promise(r => setTimeout(r, 600))
-
-    const success = login(email, password)
-    if (success) {
-      navigate('/dashboard')
-    } else {
-      setError('Email atau password salah')
+    try {
+      // 1. Panggil fungsi login di authStore yang asli (mengembalikan promise/api call)
+      const success = await login(email, password)
+      
+      if (success) {
+        navigate('/dashboard')
+      } else {
+        setError('Email atau password salah')
+      }
+    } catch (err) {
+      // 2. Tangkap error jika backend mati atau validasi gagal
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || 'Terjadi kesalahan pada server')
+      } else {
+        setError('Gagal terhubung ke server backend. Pastikan Laravel menyala!')
+      }
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const handleKeyDown = (e) => {
