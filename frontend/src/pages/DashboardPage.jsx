@@ -14,9 +14,9 @@ const statusLabel = { review: 'Review', doing: 'Proses', todo: 'Belum', approved
 export default function DashboardPage() {
   const today = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const [dashboardData, setDashboardData] = useState(null)
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     axiosInstance.get('/api/dashboard')
