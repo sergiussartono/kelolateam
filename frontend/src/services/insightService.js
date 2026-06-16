@@ -1,10 +1,14 @@
 import api from '../api/axios'
 
-const notificationService = {
-  getAll: ()    => api.get('/notifications'),
-  markRead: (id) => api.patch(`/notifications/${id}/read`),
-  markAllRead: () => api.patch('/notifications/read-all'),
-  remove: (id)  => api.delete(`/notifications/${id}`),
+const insightService = {
+  // Mengambil insight untuk user/semua tim
+  getUserInsights: () => api.get('/insights/user'),
+
+  // Mengambil insight spesifik per tim
+  getTeamInsights: (teamId) => api.get(`/insights/team/${teamId}`),
+
+  // Jika nanti kamu butuh menyimpan/mengirim pesan chat ke BE
+  store: (data) => api.post('/insights', data)
 }
 
-export default notificationService
+export default insightService

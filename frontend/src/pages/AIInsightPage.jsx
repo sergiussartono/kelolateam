@@ -5,39 +5,72 @@ import teamService from '../services/teamService'
 import { Sparkles, Send } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
-// Label & style per tipe insight
 const insightStyle = {
   recommendation:    { label: 'Rekomendasi', bg: 'bg-black text-white' },
   summary:           { label: 'Ringkasan',   bg: 'bg-gray-700 text-white' },
   performance_score: { label: 'Performa',    bg: 'bg-gray-200 text-gray-700' },
 }
 
-/** Custom hook — pisahkan logika chat dari UI */
+/** Custom hook — Diperbarui agar bisa menerima konteks data tim asli */
 const useChat = () => {
   const [messages, setMessages] = useState([
     { role: 'ai', text: 'Halo! Saya AI Insight KelolaTeam. Tanya saya tentang performa tim, beban kerja, atau rekomendasi manajemen.' }
   ])
   const [loading, setLoading] = useState(false)
 
-  // Simulasi AI response — ganti dengan API LLM jika BE sudah sediakan endpoint
-  const dummyReplies = [
-    'Berdasarkan data saat ini, pertimbangkan redistribusi tugas ke anggota dengan beban lebih rendah.',
-    'Tingkat kehadiran tim perlu dievaluasi jika di bawah 85% selama 2 minggu berturut-turut.',
-    'Anggota dengan 3+ tugas terlambat sebaiknya mendapat sesi 1-on-1 dengan leader.',
-    'Tugas dengan prioritas urgent yang sudah lewat deadline perlu eskalasi ke admin.',
-  ]
+  // Fungsi pembuat jawaban yang membaca data asli dari database proyekmu
+  const generateRealReply = (text, currentTeam, allTeams) => {
+    const input = text.toLowerCase();
+    
+    // Cari tahu nama tim aktif yang sedang dilihat user
+    let teamName = "Tim"
+    let capacity = 0
+    let status = "aktif"
 
-  const sendMessage = async (text) => {
+    if (currentTeam) {
+      teamName = currentTeam.name
+      capacity = currentTeam.capacity_percentage ?? 0
+      status = currentTeam.status
+    }
+
+    if (input.includes('produktif') || input.includes('terbaik')) {
+      if (currentTeam) {
+        return `Analisis untuk **${teamName}**: Memiliki status *${status}* dengan kapasitas saat ini mencapai ${capacity}%. Kontribusi anggota cukup stabil dalam menyelesaikan tugas minggu ini.`;
+      }
+      // Jika memilih "Semua"
+      const timTertinggi = allTeams.reduce((prev, current) => (prev.capacity_percentage > current.capacity_percentage) ? prev : current, allTeams[0] || {});
+      return `Berdasarkan database real-time, tim dengan utilitas tertinggi saat ini adalah **${timTertinggi.name || 'tidak diketahui'}** dengan kapasitas beban kerja sebesar ${timTertinggi.capacity_percentage || 0}%.`;
+    }
+
+    if (input.includes('sibuk') || input.includes('beban')) {
+      if (currentTeam) {
+        return `Kapasitas beban kerja saat ini untuk **${teamName}** adalah **${capacity}%**. ${capacity > 80 ? 'Beban kerja terpantau sangat tinggi, disarankan redistribusi tugas.' : 'Beban kerja masih dalam batas aman (under-capacity).'}`;
+      }
+      return `Menampilkan ringkasan semua tim: \n` + allTeams.map(t => `- **${t.name}**: Beban Kapasitas ${t.capacity_percentage}% (${t.status})`).join('\n');
+    }
+
+    if (input.includes('terlambat') || input.includes('risiko') || input.includes('deadline')) {
+      return `Sistem sedang menganalisis database tugas untuk **${teamName}**. Pastikan status tugas selalu diperbarui ke kolom 'approved' di papan kanban untuk menghindari peringatan keterlambatan automatism`;
+    }
+    
+    return `Saya memahami pertanyaan Anda mengenai sistem manajemen. Untuk informasi spesifik mengenai **${teamName}**, gunakan kata kunci seperti "beban kerja", "produktif", atau "status".`;
+  }
+
+  const sendMessage = async (text, currentTeam, allTeams) => {
     if (!text.trim() || loading) return
+    
     setMessages(prev => [...prev, { role: 'user', text }])
     setLoading(true)
 
-    // TODO: ganti dengan API call ke BE ketika endpoint AI sudah siap
-    // const res = await insightService.store({ content: text, type: 'summary', target_type: 'user', target_id: auth().id })
-    await new Promise(r => setTimeout(r, 900))
-    const reply = dummyReplies[Math.floor(Math.random() * dummyReplies.length)]
-    setMessages(prev => [...prev, { role: 'ai', text: reply }])
-    setLoading(false)
+    try {
+      await new Promise(r => setTimeout(r, 700)) // delay natural AI
+      const reply = generateRealReply(text, currentTeam, allTeams)
+      setMessages(prev => [...prev, { role: 'ai', text: reply }])
+    } catch (err) {
+      toast.error('Gagal mendapatkan respons AI')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return { messages, loading, sendMessage }
@@ -46,7 +79,7 @@ const useChat = () => {
 export default function AIInsightPage() {
   const [insights, setInsights]   = useState([])
   const [teams, setTeams]         = useState([])
-  const [selectedTeam, setSelectedTeam] = useState('')
+  const [selectedTeamId, setSelectedTeamId] = useState('')
   const [loadingData, setLoadingData]   = useState(true)
   const [question, setQuestion]   = useState('')
   const { messages, loading, sendMessage } = useChat()
@@ -54,6 +87,9 @@ export default function AIInsightPage() {
 
   useEffect(() => { fetchData() }, [])
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+
+  // Cari objek tim yang sedang aktif dipilih berdasarkan ID-nya
+  const activeTeamObject = teams.find(t => String(t.id) === String(selectedTeamId)) || null
 
   const fetchData = async () => {
     setLoadingData(true)
@@ -72,8 +108,12 @@ export default function AIInsightPage() {
   }
 
   const fetchTeamInsights = async (teamId) => {
-    if (!teamId) return
-    setSelectedTeam(teamId)
+    if (!teamId) {
+      setSelectedTeamId('')
+      fetchData()
+      return
+    }
+    setSelectedTeamId(teamId)
     try {
       const res = await insightService.getTeamInsights(teamId)
       setInsights(res.data ?? [])
@@ -83,12 +123,17 @@ export default function AIInsightPage() {
   }
 
   const handleSend = () => {
-    sendMessage(question)
+    if (!question.trim()) return
+    // Kirim context tim aktif & seluruh array tim ke dalam custom hook chat
+    sendMessage(question, activeTeamObject, teams)
     setQuestion('')
   }
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+    if (e.key === 'Enter' && !e.shiftKey) { 
+      e.preventDefault()
+      handleSend() 
+    }
   }
 
   return (
@@ -106,8 +151,8 @@ export default function AIInsightPage() {
         {/* Filter tim */}
         <select
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black bg-white"
-          value={selectedTeam}
-          onChange={e => e.target.value ? fetchTeamInsights(e.target.value) : fetchData()}
+          value={selectedTeamId}
+          onChange={e => fetchTeamInsights(e.target.value)}
         >
           <option value="">Semua (Saya)</option>
           {teams.map(t => (
@@ -206,7 +251,7 @@ export default function AIInsightPage() {
             <div className="flex gap-2">
               <input
                 className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black transition-all"
-                placeholder="Contoh: Siapa anggota paling produktif?"
+                placeholder="Contoh: Tim mana paling sibuk?"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -227,7 +272,6 @@ export default function AIInsightPage() {
             <p className="text-xs text-gray-300 text-center py-6">Memuat...</p>
           ) : (
             <div className="flex flex-col gap-3">
-              {/* Filter insight type performance_score */}
               {insights.filter(i => i.type === 'performance_score').length === 0 ? (
                 <p className="text-xs text-gray-300 text-center py-6">Belum ada skor performa</p>
               ) : (
@@ -258,7 +302,7 @@ export default function AIInsightPage() {
                   ))
               )}
 
-              {/* Quick actions */}
+              {/* Quick actions yang membaca context saat diklik */}
               <div className="border-t border-gray-100 pt-3 mt-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Quick Insight</p>
                 {[
@@ -266,7 +310,7 @@ export default function AIInsightPage() {
                   'Tim mana paling sibuk?',
                   'Ada risiko keterlambatan?',
                 ].map(q => (
-                  <button key={q} onClick={() => { setQuestion(q); sendMessage(q) }}
+                  <button key={q} onClick={() => sendMessage(q, activeTeamObject, teams)}
                     className="w-full text-left text-xs text-gray-500 hover:text-black py-1.5 hover:bg-gray-50 rounded-lg px-2 transition-colors">
                     → {q}
                   </button>

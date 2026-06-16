@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState,useMemo } from 'react'
 import Layout from '../components/Layout'
 import taskService from '../services/taskService'
 import attendanceService from '../services/attendanceService'
@@ -9,12 +9,15 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer
 } from 'recharts'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export default function LaporanPage() {
-  const [tasks, setTasks]           = useState([])
+  const [tasks, setTasks] = useState([])
   const [attendances, setAttendances] = useState([])
-  const [teams, setTeams]           = useState([])
-  const [loading, setLoading]       = useState(true)
+  const [teams, setTeams] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => { fetchAll() }, [])
 
@@ -36,7 +39,80 @@ export default function LaporanPage() {
     }
   }
 
-  // Hitung statistik dari data real
+  // 1. Optimasi Statistik dengan useMemo
+  const stats = useMemo(() => {
+    const totalTugas = tasks.length
+    const tugasSelesai = tasks.filter(t => t.status === 'approved').length
+    const tugasAktif = tasks.filter(t => ['todo', 'doing', 'review'].includes(t.status)).length
+    const totalHadir = attendances.filter(a => a.status === 'hadir').length
+    const pctHadir = attendances.length ? Math.round((totalHadir / attendances.length) * 100) : 0
+    
+    return { totalTugas, tugasSelesai, tugasAktif, totalHadir, pctHadir }
+  }, [tasks, attendances])
+
+  // 2. Optimasi Grafik (Kalkulasi Sekali Jalan)
+  const chartData = useMemo(() => {
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date()
+      d.setMonth(d.getMonth() - (5 - i))
+      return {
+        label: d.toLocaleDateString('id-ID', { month: 'short' }),
+        prefix: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      }
+    })
+
+    return months.map(({ label, prefix }) => {
+      const blnData = attendances.filter(a => a.date?.startsWith(prefix))
+      const hadir = blnData.filter(a => a.status === 'hadir').length
+      
+      return {
+        bulan: label,
+        persen: blnData.length ? Math.round((hadir / blnData.length) * 100) : 0,
+        selesai: tasks.filter(t => t.status === 'approved' && t.updated_at?.startsWith(prefix)).length,
+        terlambat: tasks.filter(t => t.due_date?.startsWith(prefix) && t.status !== 'approved').length
+      }
+    })
+  }, [tasks, attendances])
+
+ const handleExportExcel = () => {
+  const data = teams.map(team => ({
+    'Tim': team.name,
+    'Kategori': team.category,
+    'Anggota': team.members?.length ?? 0,
+    'Tugas Aktif': team.tasks?.filter(t => ['todo','doing','review'].includes(t.status)).length ?? 0,
+    'Tugas Selesai': team.tasks?.filter(t => t.status === 'approved').length ?? 0,
+    'Status': team.status,
+  }))
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Laporan Tim')
+  XLSX.writeFile(wb, 'laporan-kelolateam.xlsx')
+}
+
+const handleExportPDF = () => {
+    const doc = new jsPDF()
+    doc.setFontSize(14)
+    doc.text('Laporan KelolaTeam', 14, 15)
+    doc.setFontSize(10)
+    doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, 14, 22)
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['Tim', 'Kategori', 'Anggota', 'Tugas Aktif', 'Tugas Selesai', 'Status']],
+      body: teams.map(team => [
+        team.name,
+        team.category,
+        team.members?.length ?? 0,
+        team.tasks?.filter(t => ['todo','doing','review'].includes(t.status)).length ?? 0,
+        team.tasks?.filter(t => t.status === 'approved').length ?? 0,
+        team.status,
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [0, 0, 0] },
+    })
+
+    doc.save('laporan-kelolateam.pdf')
+  }
   const totalTugas    = tasks.length
   const tugasSelesai  = tasks.filter(t => t.status === 'approved').length
   const tugasAktif    = tasks.filter(t => ['todo','doing','review'].includes(t.status)).length
@@ -87,10 +163,10 @@ export default function LaporanPage() {
           <p className="text-sm text-gray-400 mt-0.5">Data real-time dari sistem</p>
         </div>
         <div className="flex gap-2">
-          <button className="flex items-center gap-2 border border-gray-200 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+          <button onClick={handleExportPDF} className="flex items-center gap-2 border border-gray-200 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
             <Download size={14} /> Export PDF
           </button>
-          <button className="flex items-center gap-2 bg-black text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-black text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors">
             <Download size={14} /> Export Excel
           </button>
         </div>
