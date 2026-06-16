@@ -1,14 +1,13 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://127.0.0.1:8000/api', // URL backend Laravel KelolaTeam
+  baseURL: 'http://127.0.0.1:8000/api', 
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   }
 })
 
-// KUNCI UTAMA: Menangkap token segar langsung dari localStorage sebelum request terkirim
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')

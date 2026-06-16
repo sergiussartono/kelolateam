@@ -385,13 +385,13 @@ export default function AbsensiPage() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowCreateSession(true)}
-            className="bg-black text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors flex items-center gap-1.5 font-medium shadow-sm"
+            className="bg-green-900 text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors flex items-center gap-1.5 font-medium shadow-sm"
           >
             <Navigation size={14} />+ Sesi Smart Location
           </button>
           <button
             onClick={() => setShowIzin(true)}
-            className="border border-gray-200 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 bg-white transition-colors"
+            className="border border-gray-400 text-sm px-4 py-2 rounded-xl hover:bg-gray-200 bg-white transition-colors"
           >
             + Ajukan Izin
           </button>

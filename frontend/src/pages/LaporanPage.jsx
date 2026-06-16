@@ -163,10 +163,10 @@ const handleExportPDF = () => {
           <p className="text-sm text-gray-400 mt-0.5">Data real-time dari sistem</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={handleExportPDF} className="flex items-center gap-2 border border-gray-200 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+          <button onClick={handleExportPDF} className="flex items-center gap-2 border border-gray-500 text-sm px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors">
             <Download size={14} /> Export PDF
           </button>
-          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-black text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors">
+          <button onClick={handleExportExcel} className="flex items-center gap-2 bg-green-900 text-white text-sm px-4 py-2 rounded-xl hover:bg-green-700 transition-colors">
             <Download size={14} /> Export Excel
           </button>
         </div>

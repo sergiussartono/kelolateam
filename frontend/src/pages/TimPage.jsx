@@ -226,7 +226,7 @@ export default function TimPage() {
           </p>
         </div>
         <button onClick={() => setShowModal(true)}
-          className="bg-black text-white text-sm px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+          className="bg-green-900 text-white text-sm px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
           <Plus size={14} /> Buat Tim
         </button>
       </div>

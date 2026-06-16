@@ -143,7 +143,7 @@ export default function AIInsightPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold">AI Insight</h1>
-            <span className="text-xs bg-black text-white px-2.5 py-0.5 rounded-full">Beta</span>
+            <span className="text-xs bg-green-500 text-white px-2.5 py-0.5 rounded-full">Beta</span>
           </div>
           <p className="text-sm text-gray-400 mt-0.5">Analisis otomatis & rekomendasi cerdas</p>
         </div>

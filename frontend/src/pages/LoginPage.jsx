@@ -78,29 +78,33 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-black rounded-2xl mx-auto mb-3 flex items-center justify-center">
-            <div className="w-4 h-4 bg-white rounded-md" />
-          </div>
+          <div className="w-14 h-14 mx-auto mb-3 flex items-center justify-center">
+            <img 
+              src="/favicon.svg" 
+              alt="Logo" 
+              className="w-full h-full object-contain" 
+            />
+        </div>
           <h1 className="text-xl font-bold tracking-tight text-gray-900">KelolaTeam</h1>
-          <p className="text-xs text-gray-400 mt-1">Platform manajemen tim & tugas internal</p>
+          <p className="text-xs text-black-400 mt-1">Platform manajemen tim & tugas internal</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+        <div className="bg-blue-300 border border-gray-100 rounded-2xl p-5 shadow-sm">
           
           {/* Tab Switcher */}
-          <div className="flex bg-gray-50 p-1 rounded-xl mb-5">
+          <div className="flex bg-black p-1 rounded-xl mb-5">
             <button 
               onClick={() => { setTab('masuk'); setError('') }}
               className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all
-                ${tab === 'masuk' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}
+                ${tab === 'masuk' ? 'bg-indigo-500 text-white shadow-sm' : 'text-white hover:text-gray-700'}`}
             >
               Masuk
             </button>
             <button 
               onClick={() => { setTab('daftar'); setError('') }}
               className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all
-                ${tab === 'daftar' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-700'}`}
+                ${tab === 'daftar' ? 'bg-indigo-500 text-white shadow-sm' : 'text-white hover:text-gray-700'}`}
             >
               Daftar
             </button>
@@ -110,7 +114,7 @@ export default function LoginPage() {
           <div className="flex flex-col gap-3.5">
             {tab === 'daftar' && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block font-medium">Nama Lengkap</label>
+                <label className="text-xs text-black mb-1 block font-medium">Nama Lengkap</label>
                 <input type="text"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black transition-all"
                   placeholder="John Doe"
@@ -119,7 +123,7 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label className="text-xs text-gray-500 mb-1 block font-medium">Email</label>
+              <label className="text-xs text-black mb-1 block font-medium">Email</label>
               <input type="email"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black transition-all"
                 placeholder="nama@email.com"
@@ -128,21 +132,18 @@ export default function LoginPage() {
 
             <div>
               <div className="flex justify-between mb-1">
-                <label className="text-xs text-gray-500 font-medium">Password</label>
-                <p className="text-[10px] text-gray-400 mt-1">Minimal 8 karakter</p>
-                {tab === 'masuk' && (
-                  <span className="text-[11px] text-gray-400 cursor-pointer hover:text-black">Lupa password?</span>
-                )}
+                <label className="text-xs text-text-black font-medium">Password</label>
               </div>
               <input type="password"
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black transition-all"
                 placeholder="••••••••"
                 value={form.password} onChange={set('password')} onKeyDown={handleKeyDown} />
+                <p className="text-[10px] text-text-black mt-1">Minimal 8 karakter</p>
             </div>
 
             {tab === 'daftar' && (
               <div>
-                <label className="text-xs text-gray-500 mb-1 block font-medium">Konfirmasi Password</label>
+                <label className="text-xs text-black mb-1 block font-medium">Konfirmasi Password</label>
                 <input type="password"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black transition-all"
                   placeholder="••••••••"

@@ -56,21 +56,22 @@ export default function Sidebar() {
 
       {/* --- SIDEBAR CONTAINER --- */}
       <div className={`
-        fixed inset-y-0 left-0 z-40 w-52 bg-white border-r border-gray-100 flex flex-col py-5 px-3 transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-40 w-52 bg-green-200 border-r border-gray-100 flex flex-col py-5 px-3 transform transition-transform duration-300 ease-in-out
         md:relative md:transform-none md:flex-shrink-0 min-h-screen
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         
         {/* Logo */}
-        <div className="flex items-center gap-2 px-3 mb-6 mt-12 md:mt-0"> {/* Ditambah margin top di mobile agar tidak tertutup tombol */}
-          <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
-            <div className="w-2.5 h-2.5 bg-white rounded-sm" />
-          </div>
-          <span className="font-semibold text-sm tracking-tight">KelolaTeam</span>
+        <div className="w-14 h-14 mx-auto mb-3 flex items-center justify-center">
+            <img 
+              src="/favicon.svg" 
+              alt="Logo" 
+              className="w-full h-full object-contain" 
+            />
         </div>
 
         {/* Menu */}
-        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider px-3 mb-2">Menu</p>
+        <p className="text-[10px] font-medium text-black uppercase tracking-wider px-3 mb-2">Menu</p>
         <div className="flex flex-col gap-0.5">
           {menuItems.map(item => {
             const Icon = item.icon
@@ -82,10 +83,10 @@ export default function Sidebar() {
                 className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-left transition-all
                   ${isActive
                     ? 'bg-gray-100 text-black font-medium'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                    : 'text-black hover:bg-gray-50 hover:text-gray-800'
                   }`}
               >
-                <Icon size={15} className={isActive ? 'text-black' : 'text-gray-400'} />
+                <Icon size={15} className="text-black" />
                 {item.label}
               </button>
             )
