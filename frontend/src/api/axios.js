@@ -1,26 +1,24 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+  baseURL: 'http://127.0.0.1:8000/api', // URL backend Laravel KelolaTeam
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  }
 })
 
-// Inject Bearer token ke setiap request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
-
-// Handle 401 → redirect ke login
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+// KUNCI UTAMA: Menangkap token segar langsung dari localStorage sebelum request terkirim
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
     }
-    return Promise.reject(err)
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
 )
 

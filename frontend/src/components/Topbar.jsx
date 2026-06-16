@@ -23,9 +23,14 @@ export default function Topbar() {
 
   // Fetch user & notifikasi saat mount
   useEffect(() => {
+  const token = localStorage.getItem('token');
+  
+  // Hanya jalankan fetch jika user memiliki token di storagenya
+  if (token) {
     if (!user) fetchMe()
     fetchNotifications()
-  }, [])
+  }
+}, [])
 
   // Close dropdown saat klik di luar
   useEffect(() => {
