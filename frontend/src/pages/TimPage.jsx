@@ -131,7 +131,7 @@ export default function TimPage() {
       await teamService.addMember(inviteTeam.id, searchResult.id, inviteRole)
       toast.success(`${searchResult.name} berhasil diundang sebagai ${inviteRole}!`)
       // Refresh data tim yang bersangkutan
-      const res = await teamService.show(inviteTeam.id)
+      const res = await teamService.getOne(inviteTeam.id)
       setTeams(prev => prev.map(t => t.id === inviteTeam.id ? res.data : t))
       if (selectedTeam?.id === inviteTeam.id) setSelectedTeam(res.data)
       closeInviteModal()
@@ -361,7 +361,7 @@ export default function TimPage() {
         </div>
       )}
 
-      {/* Modal Undang Anggota */}
+      
       {inviteTeam && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-[420px] shadow-xl">
@@ -375,7 +375,7 @@ export default function TimPage() {
             </div>
             <p className="text-xs text-gray-400 mb-5">ke tim <span className="font-medium text-gray-600">{inviteTeam.name}</span></p>
 
-            {/* Search Email */}
+            
             <div className="mb-4">
               <label className="text-xs text-gray-500 mb-1.5 block font-medium">Cari berdasarkan email</label>
               <div className="flex gap-2">
@@ -405,14 +405,14 @@ export default function TimPage() {
               </div>
             </div>
 
-            {/* Error */}
+          
             {searchError && (
               <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm text-red-600 mb-4">
                 {searchError}
               </div>
             )}
 
-            {/* Hasil pencarian */}
+            
             {searchResult && (
               <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
                 <div className="flex items-center gap-3 mb-4">
@@ -428,7 +428,7 @@ export default function TimPage() {
                   </div>
                 </div>
 
-                {/* Pilih Role */}
+                
                 <div>
                   <label className="text-xs text-gray-500 mb-1.5 block font-medium">Role dalam tim</label>
                   <div className="flex gap-2">
@@ -450,7 +450,7 @@ export default function TimPage() {
               </div>
             )}
 
-            {/* Tombol undang */}
+           
             <button
               onClick={handleUndang}
               disabled={!searchResult || inviting}

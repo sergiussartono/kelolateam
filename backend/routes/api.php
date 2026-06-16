@@ -21,12 +21,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me',      [AuthController::class, 'me']);
 
     //tim
-    Route::apiResource('teams', TeamController::class);
     Route::post('teams/{id}/members',          [TeamController::class, 'addMember']);
     Route::delete('teams/{id}/members/{userId}',[TeamController::class, 'removeMember']);
     Route::get('/teams/search-user', [TeamController::class, 'searchUser']);
     Route::post('/teams/{id}/members', [TeamController::class, 'addMember']);
     Route::delete('/teams/{id}/members/{userId}', [TeamController::class, 'removeMember']);
+    Route::apiResource('teams', TeamController::class);
 
     //tugas
     Route::apiResource('tasks', TaskController::class);
