@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceSessionController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\InsightController;
 
@@ -40,6 +41,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/view-file/{id}', [TaskController::class, 'viewFile']);    
     // Modul Absensi (Attendance)
     Route::apiResource('attendances', AttendanceController::class)->except(['show']);
+
+    // Modul Sesi Absensi (Leader)
+    Route::post('/attendance-sessions', [AttendanceSessionController::class, 'store']);
+    Route::get('/attendance-sessions/{teamId}', [AttendanceSessionController::class, 'index']);
+    Route::get('/attendance-sessions/detail/{id}', [AttendanceSessionController::class, 'show']);
+    Route::patch('/attendance-sessions/{id}/close', [AttendanceSessionController::class, 'close']);
+    
 
     // Modul Notifikasi
     Route::get('notifications',             [NotificationController::class, 'index']);
