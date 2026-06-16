@@ -5,6 +5,7 @@ import teamService from '../services/teamService'
 import { Plus, X, Upload, FileText, CheckCircle2, Paperclip, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../api/axios'
+import useAuthStore from '../store/authStore' // 1. Pastikan useAuthStore di-import dengan benar
 
 const columns = [
   { key: 'todo',     label: 'Belum Dikerjakan', dot: 'bg-gray-400',    count: 'bg-gray-100 text-gray-600' },
@@ -20,13 +21,13 @@ const priorityBadge = {
 }
 
 export default function TugasPage() {
+  // 2. Ambil data user dari Zustand store di dalam komponen utama
+  const { user } = useAuthStore()
+
   const [tasks, setTasks]   = useState([])
   const [teams, setTeams]   = useState([])
   const [loading, setLoading] = useState(true)
   
-  // State user login simulasi peran (Sesuaikan dengan auth real Anda)
-  const [userRole, setUserRole] = useState('member') // Pilihan: 'member' atau 'leader'/'admin'
-
   // State navigasi tab khusus mobile agar Kanban rapi
   const [activeTab, setActiveTab] = useState('todo')
 
@@ -43,10 +44,12 @@ export default function TugasPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [uploading, setUploading] = useState(false)
 
+  // 3. Logika Saringan FE: Ambil daftar tim yang mana user login bertindak sebagai 'leader'
+  const leaderTeams = user?.teams?.filter(team => team.pivot?.role === 'leader') || []
+  const isUserLeader = leaderTeams.length > 0
+
   useEffect(() => { 
     fetchAll()
-    // Contoh penentuan role berdasarkan sistem auth asli Anda nanti:
-    // setUserRole(auth.user.role) 
   }, [])
 
   const fetchAll = async () => {
@@ -77,13 +80,11 @@ export default function TugasPage() {
     }
   }
 
-  // Handle pemicu submit tugas (Membuka modal upload file terlebih dahulu)
   const triggerSubmitReview = (taskId) => {
     setSelectedFile(null)
     setUploadModal({ isOpen: true, taskId })
   }
 
-  // Proses upload berkas lampiran sekalian mengubah status ke review
   const handleUploadDanSubmit = async () => {
     if (!selectedFile) {
       toast.error('Wajib mengunggah file atau gambar bukti tugas!')
@@ -94,7 +95,7 @@ export default function TugasPage() {
     const formData = new FormData()
     formData.append('file', selectedFile)
     formData.append('status', 'review')
-    formData.append('progress', 100) // Otomatis set progress ke 100% saat dikirim
+    formData.append('progress', 100)
 
     try {
       const res = await taskService.update(uploadModal.taskId, formData)
@@ -137,33 +138,23 @@ export default function TugasPage() {
       toast.error('Gagal menghapus tugas')
     }
   }
+
   const handlePreview = async (taskId) => {
-  try {
-    toast.loading('Memuat pratinjau berkas...', { id: 'preview-loading' });
-
-    // Memanggil endpoint via instans 'api' agar Bearer Token otomatis disisipkan oleh interceptor
-    const response = await api.get(`/tasks/view-file/${taskId}`, {
-      responseType: 'blob' // Wajib agar stream biner file terbaca utuh sebagai objek berkas
-    });
-
-    // Validasi tipe konten yang dikembalikan
-    const contentType = response.headers['content-type'];
-    const fileBlob = new Blob([response.data], { type: contentType });
-    const fileURL = URL.createObjectURL(fileBlob);
-
-    toast.dismiss('preview-loading');
-    
-    // Membuka file blob lokal yang aman di tab baru browser
-    window.open(fileURL, '_blank');
-  } catch (err) {
-    toast.dismiss('preview-loading');
-    
-    // Cetak log error asli ke console browser untuk pelacakan mendalam
-    console.error("Detail Error KelolaTeam Preview:", err.response || err);
-    
-    toast.error('Gagal membuka berkas. Anda mungkin tidak memiliki akses atau token kedaluwarsa.');
+    try {
+      toast.loading('Memuat pratinjau berkas...', { id: 'preview-loading' })
+      const response = await api.get(`/tasks/view-file/${taskId}`, { responseType: 'blob' })
+      const contentType = response.headers['content-type']
+      const fileBlob = new Blob([response.data], { type: contentType })
+      const fileURL = URL.createObjectURL(fileBlob)
+      toast.dismiss('preview-loading')
+      window.open(fileURL, '_blank')
+    } catch (err) {
+      toast.dismiss('preview-loading')
+      console.error("Detail Error KelolaTeam Preview:", err.response || err)
+      toast.error('Gagal membuka berkas. Anda mungkin tidak memiliki akses atau token kedaluwarsa.')
+    }
   }
-};
+
   if (loading) return (
     <Layout>
       <div className="flex items-center justify-center h-64 text-sm text-gray-400">Memuat data tugas...</div>
@@ -177,20 +168,18 @@ export default function TugasPage() {
         <div>
           <h1 className="text-lg font-semibold">Manajemen Tugas</h1>
           <p className="text-sm text-gray-400 mt-0.5">Board Kanban · {tasks.length} total tugas</p>
-          <div className="mt-1 flex items-center gap-1.5">
-            <span className="text-[11px] font-medium px-2 py-0.5 bg-gray-100 rounded text-gray-500 capitalize">Mode: {userRole}</span>
-            <button 
-              onClick={() => setUserRole(prev => prev === 'member' ? 'leader' : 'member')}
-              className="text-[10px] text-blue-500 underline">Simulasi Toggle Peran</button>
-          </div>
         </div>
-        <button onClick={() => setShowModal(true)}
-          className="bg-black text-white text-sm px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
-          <Plus size={14} /> Buat Tugas
-        </button>
+        
+        {/* 4. Kunci Tombol Utama: Hanya tampilkan tombol "Buat Tugas" jika user adalah leader di minimal 1 grup */}
+        {isUserLeader && (
+          <button onClick={() => setShowModal(true)}
+            className="bg-black text-white text-sm px-4 py-2.5 rounded-xl hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+            <Plus size={14} /> Buat Tugas
+          </button>
+        )}
       </div>
 
-      {/* TAMPILAN MOBILE: Navigasi Tab (Sembunyi di Desktop `sm:hidden`) */}
+      {/* TAMPILAN MOBILE: Navigasi Tab */}
       <div className="sm:hidden flex border-b border-gray-200 mb-4 overflow-x-auto">
         {columns.map(col => (
           <button
@@ -205,130 +194,125 @@ export default function TugasPage() {
         ))}
       </div>
 
-      {/* KANBAN BOARD CONTAINER: Grid Desktop / Stack Dinamis Mobile */}
+      {/* KANBAN BOARD CONTAINER */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {columns.map(col => {
           const colTasks = getByStatus(col.key)
-          
-          // Di mobile, hanya tampilkan kolom yang tab-nya sedang aktif
           return (
             <div key={col.key} className={`bg-gray-50 rounded-xl p-3 flex flex-col min-h-[250px] sm:block ${activeTab === col.key ? 'block' : 'hidden sm:block'}`}>
-              
-              {/* Header Kolom Desktop */}
               <div className="flex items-center gap-2 mb-3">
                 <div className={`w-2 h-2 rounded-full ${col.dot}`} />
                 <p className="text-xs font-semibold text-gray-600 flex-1">{col.label}</p>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${col.count}`}>{colTasks.length}</span>
               </div>
 
-              {/* Daftar Kartu Tugas */}
               <div className="flex flex-col gap-2.5">
-                {colTasks.map(task => (
-                  <div key={task.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-                    {/* Prioritas & Tenggat Waktu */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${priorityBadge[task.priority] ?? priorityBadge.normal}`}>
-                        {task.priority}
-                      </span>
-                      {task.due_date && (
-                        <span className="text-[10px] text-gray-400">{task.due_date}</span>
-                      )}
-                    </div>
+                {colTasks.map(task => {
+                  // Cek peran user secara spesifik di dalam tim tugas ini saat ini
+                  const currentTeamData = user?.teams?.find(t => t.id === task.team_id)
+                  const isLeaderInThisTeam = currentTeamData?.pivot?.role === 'leader'
 
-                    {/* Identitas Tugas */}
-                    <p className="text-sm font-medium mb-1 leading-snug text-gray-800">{task.title}</p>
-                    <p className="text-xs text-gray-400 mb-2">{task.team?.name ?? '—'}</p>
-
-                    {/* Progress Bar */}
-                    <div className="mb-3">
-                      <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-black rounded-full transition-all" style={{ width: `${task.progress}%` }} />
+                  return (
+                    <div key={task.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase ${priorityBadge[task.priority] ?? priorityBadge.normal}`}>
+                          {task.priority}
+                        </span>
+                        {task.due_date && <span className="text-[10px] text-gray-400">{task.due_date}</span>}
                       </div>
-                      <p className="text-[9px] text-gray-400 mt-1">Progress pengerjaan: {task.progress}%</p>
-                    </div>
 
-                    {/* Indikator Jika Ada File Terlampir */}
-                    {task.file_path && (
-                      <div className="mb-3 p-1.5 bg-gray-50 rounded-lg flex items-center gap-1 text-[10px] text-gray-500 truncate">
-                        <Paperclip size={10} className="text-gray-400 flex-shrink-0" />
-                        <span className="truncate">{task.file_path.split('/').pop()}</span>
-                      </div>
-                    )}
+                      <p className="text-sm font-medium mb-1 leading-snug text-gray-800">{task.title}</p>
+                      <p className="text-xs text-gray-400 mb-2">{task.team?.name ?? '—'}</p>
 
-                    {/* Penerima Tugas & Tombol Hapus */}
-                    <div className="flex items-center justify-between mb-3 border-t border-gray-50 pt-2.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
-                          {task.assignee?.name?.slice(0, 2).toUpperCase() ?? 'NA'}
+                      <div className="mb-3">
+                        <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-black rounded-full transition-all" style={{ width: `${task.progress}%` }} />
                         </div>
-                        <span className="text-xs text-gray-500 truncate">{task.assignee?.name ?? '—'}</span>
+                        <p className="text-[9px] text-gray-400 mt-1">Progress pengerjaan: {task.progress}%</p>
                       </div>
-                      <button onClick={() => handleHapus(task.id)}
-                        className="text-[10px] text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
-                        hapus
-                      </button>
-                    </div>
 
-                    {/* KENDALI LAYOUT TOMBOL AKSI BERDASARKAN STATUS DAN PERAN USER */}
-                    <div className="mt-2">
-                      {/* 1. KOLOM TODO */}
-                      {task.status === 'todo' && (
-                        <button onClick={() => handleUpdateStatus(task.id, 'doing')}
-                          className="w-full bg-white border border-gray-200 text-gray-700 font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                          Mulai Kerjakan
-                        </button>
-                      )}
-
-                      {/* 2. KOLOM DOING (Wajib upload file waktu mau disubmit) */}
-                      {task.status === 'doing' && (
-                        <button onClick={() => triggerSubmitReview(task.id)}
-                          className="w-full bg-black text-white font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-1 transition-colors">
-                          <Upload size={11} /> Submit Tugas
-                        </button>
-                      )}
-
-                      {/* 3. KOLOM REVIEW / SELESAI */}
-                      {task.status === 'review' && (
-                        <div>
-                          {task.file_path && (
-                            <div 
-                              onClick={() => handlePreview(task.id)} // Tinggal tambahkan fungsi klik di sini
-                              className="mb-3 p-1.5 bg-gray-50 rounded-lg flex items-center gap-1 text-[10px] text-gray-500 truncate cursor-pointer hover:bg-gray-100"
-                              title="Klik untuk pratinjau berkas"
-                            >
-                              <Paperclip size={10} className="text-gray-400 flex-shrink-0" />
-                              <span className="truncate">{task.file_path.split('/').pop()}</span>
-                            </div>
-                          )}
-                          {userRole === 'leader' || userRole === 'admin' ? (
-                            <div className="flex gap-1.5">
-                              <button onClick={() => handleUpdateStatus(task.id, 'approved')}
-                                className="flex-1 bg-emerald-600 text-white font-medium text-[11px] py-1.5 rounded-lg hover:bg-emerald-700 transition-colors">
-                                Approve
-                              </button>
-                              <button onClick={() => handleUpdateStatus(task.id, 'doing')}
-                                className="flex-1 border border-gray-200 text-gray-600 font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                                Revisi
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="text-center p-1.5 bg-amber-50 text-amber-700 text-[10px] rounded-lg font-medium">
-                              Menunggu review leader...
-                            </div>
-                          )}
+                      {task.file_path && (
+                        <div className="mb-3 p-1.5 bg-gray-50 rounded-lg flex items-center gap-1 text-[10px] text-gray-500 truncate">
+                          <Paperclip size={10} className="text-gray-400 flex-shrink-0" />
+                          <span className="truncate">{task.file_path.split('/').pop()}</span>
                         </div>
                       )}
 
-                      {/* 4. KOLOM APPROVED */}
-                      {task.status === 'approved' && (
-                        <div className="flex items-center justify-center gap-1 text-emerald-600 text-[11px] font-medium py-1">
-                          <CheckCircle2 size={12} /> Selesai Terverifikasi
+                      <div className="flex items-center justify-between mb-3 border-t border-gray-50 pt-2.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-[10px] font-medium flex-shrink-0">
+                            {task.assignee?.name?.slice(0, 2).toUpperCase() ?? 'NA'}
+                          </div>
+                          <span className="text-xs text-gray-500 truncate">{task.assignee?.name ?? '—'}</span>
                         </div>
-                      )}
-                    </div>
+                        
+                        {/* Hapus hanya bisa dilakukan oleh leader di tim tersebut */}
+                        {isLeaderInThisTeam && (
+                          <button onClick={() => handleHapus(task.id)}
+                            className="text-[10px] text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                            hapus
+                          </button>
+                        )}
+                      </div>
 
-                  </div>
-                ))}
+                      <div className="mt-2">
+                        {task.status === 'todo' && (
+                          <button onClick={() => handleUpdateStatus(task.id, 'doing')}
+                            className="w-full bg-white border border-gray-200 text-gray-700 font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                            Mulai Kerjakan
+                          </button>
+                        )}
+
+                        {task.status === 'doing' && (
+                          <button onClick={() => triggerSubmitReview(task.id)}
+                            className="w-full bg-black text-white font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-800 flex items-center justify-center gap-1 transition-colors">
+                            <Upload size={11} /> Submit Tugas
+                          </button>
+                        )}
+
+                        {task.status === 'review' && (
+                          <div>
+                            {task.file_path && (
+                              <div 
+                                onClick={() => handlePreview(task.id)}
+                                className="mb-3 p-1.5 bg-gray-50 rounded-lg flex items-center gap-1 text-[10px] text-gray-500 truncate cursor-pointer hover:bg-gray-100"
+                                title="Klik untuk pratinjau berkas"
+                              >
+                                <Paperclip size={10} className="text-gray-400 flex-shrink-0" />
+                                <span className="truncate">{task.file_path.split('/').pop()}</span>
+                              </div>
+                            )}
+                            
+                            {/* 5. Aksi Approve/Revisi dikunci agar hanya bisa di-klik oleh Leader asli di tim tersebut */}
+                            {isLeaderInThisTeam ? (
+                              <div className="flex gap-1.5">
+                                <button onClick={() => handleUpdateStatus(task.id, 'approved')}
+                                  className="flex-1 bg-emerald-600 text-white font-medium text-[11px] py-1.5 rounded-lg hover:bg-emerald-700 transition-colors">
+                                  Approve
+                                </button>
+                                <button onClick={() => handleUpdateStatus(task.id, 'doing')}
+                                  className="flex-1 border border-gray-200 text-gray-600 font-medium text-[11px] py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                                  Revisi
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-center p-1.5 bg-amber-50 text-amber-700 text-[10px] rounded-lg font-medium">
+                                Menunggu review leader...
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {task.status === 'approved' && (
+                          <div className="flex items-center justify-center gap-1 text-emerald-600 text-[11px] font-medium py-1">
+                            <CheckCircle2 size={12} /> Selesai Terverifikasi
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  )
+                })}
 
                 {colTasks.length === 0 && (
                   <div className="text-center py-8 text-xs text-gray-300 bg-white border border-dashed border-gray-200 rounded-xl">Tidak ada tugas</div>
@@ -339,9 +323,9 @@ export default function TugasPage() {
         })}
       </div>
 
-      {/* --- MODAL INPUT SUBMIT UPLOAD TUGAS (RESPONSIF) --- */}
+      {/* --- MODAL UPLOAD HASIL TUGAS --- */}
       {uploadModal.isOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-5 w-[92%] sm:w-[380px] shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-sm sm:text-base flex items-center gap-1.5">
@@ -391,7 +375,7 @@ export default function TugasPage() {
         </div>
       )}
 
-      {/* Modal Buat Tugas Baru */}
+      {/* --- MODAL BUAT TUGAS BARU --- */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-5 sm:p-6 w-[92%] sm:w-[420px] shadow-xl max-h-[90vh] overflow-y-auto">
@@ -425,10 +409,17 @@ export default function TugasPage() {
                   value={newTask.team_id}
                   onChange={e => setNewTask({ ...newTask, team_id: e.target.value })}
                 >
-                  <option value="">Pilih tim</option>
-                  {teams.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
+                  {/* 6. Seleksi Dropdown Dinamis: Melakukan perulangan hanya dari tim yang dipimpin */}
+                  {leaderTeams.length === 0 ? (
+                    <option value="">Tidak ada grup yang Anda pimpin</option>
+                  ) : (
+                    <>
+                      <option value="">Pilih tim yang Anda pimpin</option>
+                      {leaderTeams.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
