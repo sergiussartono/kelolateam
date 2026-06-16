@@ -350,15 +350,13 @@ export default function AbsensiPage() {
       const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 
       await api.post('/attendances', {
-        session_id:      activeSessionInfo.id,
-        date:            todayIso,
-        clock_in:        timeStr,
-        location_lat:    0,
-        location_long:   0,
-        status:          'izin',
-        is_mock_location: false,
-        remarks: `[${izinForm.alasan}] ${izinForm.keterangan}`,
-      })
+            session_id: activeSessionInfo?.id || 1, // Pastikan ada ID sesi
+            date: todayIso,
+            clock_in: timeStr,
+            status: 'izin',
+            remarks: `[${izinForm.alasan}] ${izinForm.keterangan}`,
+            is_within_radius: false,
+        });
 
       toast.success('Pengajuan izin berhasil dikirim!')
       setShowIzin(false)

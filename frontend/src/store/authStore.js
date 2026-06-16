@@ -14,7 +14,16 @@ const useAuthStore = create((set, get) => ({
     set({ user, isAuthenticated: true })
     return response
   },
-
+  register: async (name, email, password, password_confirmation) => {
+    // Pastikan authService punya fungsi register
+    const response = await authService.register(name, email, password, password_confirmation);
+    const token = response.data.token;
+    const user = response.data.user;
+    
+    localStorage.setItem('token', token);
+    set({ user, isAuthenticated: true });
+    return response;
+  },
   logout: async () => {
     try {
       await authService.logout()

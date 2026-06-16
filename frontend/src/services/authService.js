@@ -8,8 +8,12 @@ const authService = {
   login: (email, password) =>
     api.post('/login', { email, password }),
 
-  register: (name, email, password) =>
-    api.post('/register', { name, email, password }),
+  register: async (name, email, password, password_confirmation) => {
+        // Asumsi kamu menggunakan axios instance yang sudah diset base URL-nya
+        return await api.post('/register', { 
+            name, email, password, password_confirmation 
+        });
+    },
 
   logout: () =>
     api.post('/logout'),

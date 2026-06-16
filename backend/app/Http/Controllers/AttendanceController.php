@@ -39,7 +39,7 @@ class AttendanceController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'session_id'       => 'required|exists:attendance_sessions,id', // ← wajib kirim session_id
+            'session_id'       => 'required_if:status,hadir,lambat|exists:attendance_sessions,id', // ← wajib kirim session_id
             'date'             => 'required|date',
             'clock_in'         => 'nullable|date_format:H:i',
             'location_lat'     => 'required|numeric',

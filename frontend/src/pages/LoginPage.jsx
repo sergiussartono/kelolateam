@@ -47,10 +47,21 @@ export default function LoginPage() {
       setTab('masuk')
       setForm({ name: '', email: '', password: '', password_confirmation: '' })
     } catch (err) {
-      setError(err.response?.data?.message || 'Registrasi gagal, periksa data kembali')
+      // Tambahkan console log ini untuk melihat detail error di Inspect Element > Console
+      console.log("Detail Error:", err.response?.data?.errors); 
+      
+      // Jika err.response.data.errors ada, ambil pesan pertama
+      const serverErrors = err.response?.data?.errors;
+      const errorMsg = serverErrors 
+        ? Object.values(serverErrors)[0][0] 
+        : (err.response?.data?.message || 'Registrasi gagal, periksa data kembali');
+        
+      setError(errorMsg);
     } finally {
       setLoading(false)
     }
+    
+    
   }
 
   const handleKeyDown = (e) => { 
@@ -103,7 +114,7 @@ export default function LoginPage() {
                 <input type="text"
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black transition-all"
                   placeholder="John Doe"
-                  value={form.name} onChange={set('name')} />
+                  value={form.name} onChange={set('name')} onKeyDown={handleKeyDown} />
               </div>
             )}
 
@@ -118,6 +129,7 @@ export default function LoginPage() {
             <div>
               <div className="flex justify-between mb-1">
                 <label className="text-xs text-gray-500 font-medium">Password</label>
+                <p className="text-[10px] text-gray-400 mt-1">Minimal 8 karakter</p>
                 {tab === 'masuk' && (
                   <span className="text-[11px] text-gray-400 cursor-pointer hover:text-black">Lupa password?</span>
                 )}
