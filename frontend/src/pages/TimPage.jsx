@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import teamService from '../services/teamService'
-import { Plus, X, Users } from 'lucide-react'
+import { Plus, X, Users, UserPlus, Search, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 // Warna progress bar berdasarkan kapasitas
@@ -23,7 +23,6 @@ const statusBadge = {
   arsip: 'bg-red-100 text-red-600',
 }
 
-// Hitung kapasitas dari jumlah tugas aktif vs total anggota
 const hitungKapasitas = (team) => {
   const aktivTugas = team.tasks?.filter(t => ['todo','doing','review'].includes(t.status)).length ?? 0
   const anggota = team.members?.length ?? 1
@@ -31,12 +30,23 @@ const hitungKapasitas = (team) => {
 }
 
 export default function TimPage() {
-  const [teams, setTeams] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [teams, setTeams]               = useState([])
+  const [loading, setLoading]           = useState(true)
   const [selectedTeam, setSelectedTeam] = useState(null)
-  const [showModal, setShowModal] = useState(false)
+
+  // Modal buat tim
+  const [showModal, setShowModal]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [newTeam, setNewTeam] = useState({ name: '', category: '', status: 'baru' })
+  const [newTeam, setNewTeam]       = useState({ name: '', category: '', status: 'baru' })
+
+  // Modal undang anggota
+  const [inviteTeam, setInviteTeam]         = useState(null)   // tim yang sedang diundang
+  const [inviteEmail, setInviteEmail]       = useState('')
+  const [inviteRole, setInviteRole]         = useState('member')
+  const [searchResult, setSearchResult]     = useState(null)   // user hasil pencarian
+  const [searchError, setSearchError]       = useState('')
+  const [searching, setSearching]           = useState(false)
+  const [inviting, setInviting]             = useState(false)
 
   useEffect(() => { fetchTeams() }, [])
 
@@ -83,6 +93,55 @@ export default function TimPage() {
     }
   }
 
+  // --- Undang Anggota ---
+  const openInviteModal = (team) => {
+    setInviteTeam(team)
+    setInviteEmail('')
+    setInviteRole('member')
+    setSearchResult(null)
+    setSearchError('')
+  }
+
+  const closeInviteModal = () => {
+    setInviteTeam(null)
+    setSearchResult(null)
+    setSearchError('')
+    setInviteEmail('')
+  }
+
+  const handleSearchUser = async () => {
+    if (!inviteEmail.trim()) return
+    setSearching(true)
+    setSearchResult(null)
+    setSearchError('')
+    try {
+      const res = await teamService.searchUser(inviteEmail.trim())
+      setSearchResult(res.data)
+    } catch (err) {
+      setSearchError(err.response?.data?.message || 'User tidak ditemukan')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleUndang = async () => {
+    if (!searchResult) return
+    setInviting(true)
+    try {
+      await teamService.addMember(inviteTeam.id, searchResult.id, inviteRole)
+      toast.success(`${searchResult.name} berhasil diundang sebagai ${inviteRole}!`)
+      // Refresh data tim yang bersangkutan
+      const res = await teamService.show(inviteTeam.id)
+      setTeams(prev => prev.map(t => t.id === inviteTeam.id ? res.data : t))
+      if (selectedTeam?.id === inviteTeam.id) setSelectedTeam(res.data)
+      closeInviteModal()
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal mengundang anggota')
+    } finally {
+      setInviting(false)
+    }
+  }
+
   if (loading) return (
     <Layout>
       <div className="flex items-center justify-center h-64 text-sm text-gray-400">Memuat data tim...</div>
@@ -95,7 +154,9 @@ export default function TimPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-lg font-semibold">Kelola Tim</h1>
-          <p className="text-sm text-gray-400 mt-0.5">{teams.length} tim · {teams.reduce((a, t) => a + (t.members?.length ?? 0), 0)} anggota</p>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {teams.length} tim · {teams.reduce((a, t) => a + (t.members?.length ?? 0), 0)} anggota
+          </p>
         </div>
         <button onClick={() => setShowModal(true)}
           className="bg-black text-white text-sm px-4 py-2 rounded-xl hover:bg-gray-800 transition-colors flex items-center gap-2">
@@ -162,8 +223,12 @@ export default function TimPage() {
                       className="flex-1 bg-black text-white text-xs py-2 rounded-lg hover:bg-gray-800 transition-colors">
                       Kelola
                     </button>
+                    <button onClick={() => openInviteModal(team)}
+                      className="flex-1 border border-gray-200 text-xs py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                      <UserPlus size={12} /> Undang
+                    </button>
                     <button onClick={() => handleHapusTim(team.id)}
-                      className="flex-1 border border-gray-200 text-xs py-2 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors">
+                      className="border border-gray-200 text-xs px-3 py-2 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors">
                       Hapus
                     </button>
                   </div>
@@ -196,9 +261,15 @@ export default function TimPage() {
               <Users size={16} />
               <p className="font-semibold">{selectedTeam.name} — Daftar Anggota</p>
             </div>
-            <button onClick={() => setSelectedTeam(null)} className="text-gray-400 hover:text-black">
-              <X size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => openInviteModal(selectedTeam)}
+                className="flex items-center gap-1.5 text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                <UserPlus size={12} /> Undang
+              </button>
+              <button onClick={() => setSelectedTeam(null)} className="text-gray-400 hover:text-black">
+                <X size={16} />
+              </button>
+            </div>
           </div>
           <table className="w-full text-sm">
             <thead>
@@ -286,6 +357,110 @@ export default function TimPage() {
                 {submitting ? 'Membuat...' : 'Buat Tim'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Undang Anggota */}
+      {inviteTeam && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-[420px] shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <UserPlus size={16} />
+                <h2 className="font-semibold">Undang Anggota</h2>
+              </div>
+              <button onClick={closeInviteModal} className="text-gray-400 hover:text-black"><X size={16} /></button>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">ke tim <span className="font-medium text-gray-600">{inviteTeam.name}</span></p>
+
+            {/* Search Email */}
+            <div className="mb-4">
+              <label className="text-xs text-gray-500 mb-1.5 block font-medium">Cari berdasarkan email</label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-black"
+                  placeholder="contoh@email.com"
+                  value={inviteEmail}
+                  onChange={e => {
+                    setInviteEmail(e.target.value)
+                    setSearchResult(null)
+                    setSearchError('')
+                  }}
+                  onKeyDown={e => e.key === 'Enter' && handleSearchUser()}
+                />
+                <button
+                  onClick={handleSearchUser}
+                  disabled={searching || !inviteEmail.trim()}
+                  className="px-3 py-2.5 bg-gray-100 rounded-xl hover:bg-gray-200 disabled:opacity-50 transition-colors flex items-center gap-1.5 text-sm"
+                >
+                  {searching
+                    ? <Loader2 size={14} className="animate-spin" />
+                    : <Search size={14} />
+                  }
+                  Cari
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            {searchError && (
+              <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-sm text-red-600 mb-4">
+                {searchError}
+              </div>
+            )}
+
+            {/* Hasil pencarian */}
+            {searchResult && (
+              <div className="border border-gray-100 rounded-xl p-4 mb-4 bg-gray-50">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    {searchResult.name?.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{searchResult.name}</p>
+                    <p className="text-xs text-gray-400">{searchResult.email}</p>
+                  </div>
+                  <div className="ml-auto">
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium">Ditemukan</span>
+                  </div>
+                </div>
+
+                {/* Pilih Role */}
+                <div>
+                  <label className="text-xs text-gray-500 mb-1.5 block font-medium">Role dalam tim</label>
+                  <div className="flex gap-2">
+                    {['member', 'leader'].map(r => (
+                      <button
+                        key={r}
+                        onClick={() => setInviteRole(r)}
+                        className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors
+                          ${inviteRole === r
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                          }`}
+                      >
+                        {r === 'leader' ? 'Leader' : 'Member'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tombol undang */}
+            <button
+              onClick={handleUndang}
+              disabled={!searchResult || inviting}
+              className="w-full bg-black text-white rounded-xl py-2.5 text-sm font-medium hover:bg-gray-800 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            >
+              {inviting
+                ? <><Loader2 size={14} className="animate-spin" /> Mengundang...</>
+                : <><UserPlus size={14} /> Undang ke Tim</>
+              }
+            </button>
           </div>
         </div>
       )}

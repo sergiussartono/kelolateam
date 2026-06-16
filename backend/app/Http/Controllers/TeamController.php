@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\Team;
 
 class TeamController extends Controller
@@ -59,6 +60,20 @@ class TeamController extends Controller
         return response()->json(['message' => 'Tim dihapus']);
     }
 
+    public function searchUser(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)
+                    ->select('id', 'name', 'email', 'avatar_color')
+                    ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User tidak ditemukan'], 404);
+        }
+
+        return response()->json($user);
+    }
 
     public function addMember(Request $request, $id)
     {

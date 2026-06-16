@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\AttendanceController;
@@ -23,6 +24,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('teams', TeamController::class);
     Route::post('teams/{id}/members',          [TeamController::class, 'addMember']);
     Route::delete('teams/{id}/members/{userId}',[TeamController::class, 'removeMember']);
+    Route::get('/teams/search-user', [TeamController::class, 'searchUser']);
+    Route::post('/teams/{id}/members', [TeamController::class, 'addMember']);
+    Route::delete('/teams/{id}/members/{userId}', [TeamController::class, 'removeMember']);
 
     //tugas
     Route::apiResource('tasks', TaskController::class);
