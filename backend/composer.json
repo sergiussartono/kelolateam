@@ -70,7 +70,10 @@
         "ignore": [
             "PKSA-mdq4-51ck-6kdq"
         ]
-     }
+     },
+        "platform": {
+            "php": "8.2.31"
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true
