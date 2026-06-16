@@ -27,10 +27,14 @@ class TaskController extends Controller
             'priority'    => 'in:urgent,normal,low',       
             'status'      => 'in:todo,doing,review,approved', 
             'progress'    => 'integer|min:0|max:100',      
-            'file_path'   => 'nullable|string',            
+            'file_path'   => 'nullable|string',    
+                    
         ]);
 
-        $task = Task::create($validated);
+        $task = Task::create([
+            ...$validated,
+            'user_id' => auth()->id(),
+        ]);
         return response()->json($task->load('team', 'assignee'), 201);
     }
 

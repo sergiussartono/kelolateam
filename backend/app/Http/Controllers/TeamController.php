@@ -83,11 +83,21 @@ class TeamController extends Controller
         ]);
 
         $team = Team::findOrFail($id);
-        $team->members()->syncWithoutDetaching([
-            $request->user_id => ['role' => $request->role ?? 'member']
-        ]);
+        
+        // Cek apakah sudah jadi anggota
+        if ($team->members()->where('user_id', $request->user_id)->exists()) {
+            // Update role-nya saja
+            $team->members()->updateExistingPivot($request->user_id, [
+                'role' => $request->role ?? 'member'
+            ]);
+        } else {
+            // Tambah sebagai anggota baru
+            $team->members()->attach($request->user_id, [
+                'role' => $request->role ?? 'member'
+            ]);
+        }
 
-        return response()->json(['message' => 'Anggota ditambahkan']);
+        return response()->json(['message' => 'Anggota ditambahkan/diperbarui']);
     }
 
 

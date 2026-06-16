@@ -3,6 +3,7 @@ import Layout from '../components/Layout'
 import teamService from '../services/teamService'
 import { Plus, X, Users, UserPlus, Search, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import useAuthStore from '../store/authStore'
 
 // Warna progress bar berdasarkan kapasitas
 const barColor = (cap) => {
@@ -33,7 +34,7 @@ export default function TimPage() {
   const [teams, setTeams]               = useState([])
   const [loading, setLoading]           = useState(true)
   const [selectedTeam, setSelectedTeam] = useState(null)
-
+  const { user, fetchMe } = useAuthStore()
   // Modal buat tim
   const [showModal, setShowModal]   = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -48,7 +49,10 @@ export default function TimPage() {
   const [searching, setSearching]           = useState(false)
   const [inviting, setInviting]             = useState(false)
 
-  // --- State Baru untuk Modal Konfirmasi Hapus ---
+  const isLeaderOf = (teamId) =>
+  user?.teams?.some(t => t.id === teamId && t.pivot?.role === 'leader')
+
+  
   const [confirmModal, setConfirmModal]     = useState({
     isOpen: false,
     type: '', // 'team' atau 'member'
@@ -76,6 +80,9 @@ export default function TimPage() {
     if (!newTeam.name || !newTeam.category) {
       toast.error('Nama dan kategori wajib diisi')
       return
+      const res = await teamService.create(newTeam)
+      setTeams(prev => [...prev, res.data])
+      await fetchMe()
     }
     setSubmitting(true)
     try {
@@ -177,19 +184,28 @@ export default function TimPage() {
   }
 
   const handleUndang = async () => {
-    if (!searchResult) return
-    setInviting(true)
+  if (!searchResult) return;
+
+  // --- CEK DUPLIKASI DI SINI ---
+  const isAlreadyMember = inviteTeam.members?.some(m => m.id === searchResult.id);
+    if (isAlreadyMember) {
+      toast.error(`${searchResult.name} sudah tergabung dalam tim ini!`);
+      return;
+    }
+    // -----------------------------
+
+    setInviting(true);
     try {
-      await teamService.addMember(inviteTeam.id, searchResult.id, inviteRole)
-      toast.success(`${searchResult.name} berhasil diundang sebagai ${inviteRole}!`)
-      const res = await teamService.getOne(inviteTeam.id)
-      setTeams(prev => prev.map(t => t.id === inviteTeam.id ? res.data : t))
-      if (selectedTeam?.id === inviteTeam.id) setSelectedTeam(res.data)
-      closeInviteModal()
+      await teamService.addMember(inviteTeam.id, searchResult.id, inviteRole);
+      toast.success(`${searchResult.name} berhasil diundang sebagai ${inviteRole}!`);
+      const res = await teamService.getOne(inviteTeam.id);
+      setTeams(prev => prev.map(t => t.id === inviteTeam.id ? res.data : t));
+      if (selectedTeam?.id === inviteTeam.id) setSelectedTeam(res.data);
+      closeInviteModal();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Gagal mengundang anggota')
+      toast.error(err.response?.data?.message || 'Gagal mengundang anggota');
     } finally {
-      setInviting(false)
+      setInviting(false);
     }
   }
 
@@ -270,16 +286,20 @@ export default function TimPage() {
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setSelectedTeam(team)}
                         className="flex-1 min-w-[70px] bg-black text-white text-xs py-2 rounded-lg hover:bg-gray-800 transition-colors">
-                        Kelola
+                        Lihat Anggota
                       </button>
-                      <button onClick={() => openInviteModal(team)}
-                        className="flex-1 min-w-[70px] border border-gray-200 text-xs py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
-                        <UserPlus size={12} /> Undang
-                      </button>
-                      <button onClick={() => triggerHapusTim(team.id, team.name)}
-                        className="border border-gray-200 text-xs px-2.5 py-2 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors">
-                        Hapus
-                      </button>
+                      {isLeaderOf(team.id) && (
+                        <button onClick={() => openInviteModal(team)}
+                          className="flex-1 min-w-[70px] border border-gray-200 text-xs py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                          <UserPlus size={12} /> Undang
+                        </button>
+                      )}
+                      {isLeaderOf(team.id) && (
+                        <button onClick={() => triggerHapusTim(team.id, team.name)}
+                          className="border border-gray-200 text-xs px-2.5 py-2 rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition-colors">
+                          Hapus
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -313,10 +333,12 @@ export default function TimPage() {
               <p className="font-semibold text-sm sm:text-base truncate">{selectedTeam.name} — Kelola Anggota</p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+              {isLeaderOf(selectedTeam.id) && (
               <button onClick={() => openInviteModal(selectedTeam)}
                 className="flex items-center gap-1.5 text-xs border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
                 <UserPlus size={12} /> Undang
               </button>
+            )}
               <button onClick={() => setSelectedTeam(null)} className="text-gray-400 hover:text-black p-1">
                 <X size={16} />
               </button>
@@ -361,13 +383,15 @@ export default function TimPage() {
                       </div>
                     </td>
                     <td className="py-3 text-center">
-                      <button
-                        onClick={() => triggerHapusMember(selectedTeam.id, m.id, m.name)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-flex items-center justify-center"
-                        title="Keluarkan dari tim"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {isLeaderOf(selectedTeam.id) && (
+                        <button
+                          onClick={() => triggerHapusMember(selectedTeam.id, m.id, m.name)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors inline-flex items-center justify-center"
+                          title="Keluarkan dari tim"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -471,7 +495,7 @@ export default function TimPage() {
             )}
 
             {searchResult && (
-              <div className="border border-gray-100 rounded-xl p-3 sm:p-4 mb-4 bg-gray-50">
+              <div className={`border rounded-xl p-3 sm:p-4 mb-4 ${inviteTeam.members?.some(m => m.id === searchResult.id) ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100'}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm font-semibold flex-shrink-0 mx-auto sm:mx-0">
                     {searchResult.name?.slice(0, 2).toUpperCase()}
@@ -481,28 +505,31 @@ export default function TimPage() {
                     <p className="text-xs text-gray-400 truncate">{searchResult.email}</p>
                   </div>
                   <div className="sm:ml-auto text-center">
-                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full font-medium inline-block">Ditemukan</span>
+                    {inviteTeam.members?.some(m => m.id === searchResult.id) ? (
+                      <span className="text-[10px] uppercase font-bold bg-red-100 text-red-700 px-2.5 py-1 rounded-full">Sudah di Tim</span>
+                    ) : (
+                      <span className="text-[10px] uppercase font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Siap Diundang</span>
+                    )}
                   </div>
                 </div>
 
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block font-medium">Role dalam tim</label>
-                  <div className="flex gap-2">
-                    {['member', 'leader'].map(r => (
-                      <button
-                        key={r}
-                        onClick={() => setInviteRole(r)}
-                        className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors
-                          ${inviteRole === r
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                          }`}
-                      >
-                        {r === 'leader' ? 'Leader' : 'Member'}
-                      </button>
-                    ))}
+                {/* Sembunyikan pilihan role jika user sudah menjadi anggota */}
+                {!inviteTeam.members?.some(m => m.id === searchResult.id) && (
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1.5 block font-medium">Role dalam tim</label>
+                    <div className="flex gap-2">
+                      {['member', 'leader'].map(r => (
+                        <button
+                          key={r}
+                          onClick={() => setInviteRole(r)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${inviteRole === r ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                        >
+                          {r === 'leader' ? 'Leader' : 'Member'}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
