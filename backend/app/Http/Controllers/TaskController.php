@@ -10,9 +10,9 @@ class TaskController extends Controller
 {
     public function index()
     {
-        $tasks = Task::with('team', 'assignee')
-                     ->where('user_id', auth()->id())
-                     ->get();
+        $tasks = Task::whereHas('team.members', function($query) {
+        $query->where('user_id', auth()->id());
+        })->with('team', 'assignee')->get();
         return response()->json($tasks);
     }
 
@@ -21,6 +21,8 @@ class TaskController extends Controller
         $validated = $request->validate([
             'team_id'     => 'required|exists:teams,id',
             'user_id'     => 'nullable|exists:users,id',
+            'member_ids'  => 'required|array', // Tambahkan validasi untuk daftar anggota
+            'member_ids.*'=> 'exists:users,id',
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date'    => 'required|date',
