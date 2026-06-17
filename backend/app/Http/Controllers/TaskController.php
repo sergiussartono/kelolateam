@@ -21,8 +21,6 @@ class TaskController extends Controller
         $validated = $request->validate([
             'team_id'     => 'required|exists:teams,id',
             'user_id'     => 'nullable|exists:users,id',
-            'member_ids'  => 'required|array', // Tambahkan validasi untuk daftar anggota
-            'member_ids.*'=> 'exists:users,id',
             'title'       => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date'    => 'required|date',
