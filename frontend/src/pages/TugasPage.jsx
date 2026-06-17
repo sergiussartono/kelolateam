@@ -45,11 +45,13 @@ export default function TugasPage() {
   const [uploading, setUploading] = useState(false)
 
   // 3. Logika Saringan FE: Ambil daftar tim yang mana user login bertindak sebagai 'leader'
-  const leaderTeams = user?.teams?.filter(team => team.pivot?.role === 'leader') || []
+   const leaderTeams = useMemo(() =>
+    teams.filter(team =>
+      team.members?.some(m => m.id === user.id && m.pivot?.role === 'leader')
+    )
+  , [user, teams])
   const isUserLeader = leaderTeams.length > 0
-  console.log('user:', user)
-  console.log('leaderTeams:', leaderTeams)
-  console.log('isUserLeader:', isUserLeader)
+  
 
   useEffect(() => { 
     fetchAll()
